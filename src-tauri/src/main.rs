@@ -6,27 +6,29 @@ use chacha20poly1305::{
     ChaCha20Poly1305, Nonce, Key
 };
 
-use hex_literal::hex;
-use pbkdf2::{pbkdf2_hmac, pbkdf2_hmac_array};
+use pbkdf2::pbkdf2_hmac_array;
 use sha2::Sha256;
 use base64::{Engine as _, engine::general_purpose};
-use pbkdf2::hmac::digest::generic_array::GenericArray;
 
+const SALT: [u8; 16] = [64, 140, 125, 35, 226, 180, 39, 81, 248, 178, 119, 236, 9, 70, 3, 171];
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+fn generate_key(password: &str) -> String {
+
+    let key = pbkdf2_hmac_array::<Sha256, 32>(password.as_bytes(), &SALT[..], 600_000);
+    general_purpose::STANDARD_NO_PAD.encode(key)
 }
 
 #[tauri::command]
-fn encrypt(password: &str, plaintext: &str) -> String {
-    let salt = b"salt";
+fn encrypt(key: &str, plaintext: &str) -> String {
+    let key = general_purpose::STANDARD_NO_PAD.decode(key).unwrap_or(Vec::new());
+    if key.len() != 32 {
+        return String::from("Key is the wrong size")
+    }
 
-    let key = pbkdf2_hmac_array::<Sha256, 32>(password.as_bytes(), salt, 1_000);
     let key = Key::from_slice(&key);
 
-    let cipher = ChaCha20Poly1305::new(&key);
+    let cipher = ChaCha20Poly1305::new(key);
     let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
     let ciphertext = cipher.encrypt(&nonce, plaintext.as_bytes()).unwrap();
 
@@ -34,8 +36,13 @@ fn encrypt(password: &str, plaintext: &str) -> String {
 }
 
 #[tauri::command]
-fn decrypt(password: &str, ciphertext: &str) -> String {
-    let salt = b"salt";
+fn decrypt(key: &str, ciphertext: &str) -> String {
+    let key = general_purpose::STANDARD_NO_PAD.decode(key).unwrap_or(Vec::new());
+    if key.len() != 32 {
+        return String::from("Key is the wrong size")
+    }
+
+    let key = Key::from_slice(&key);
 
     if let Ok(ciphertext) = general_purpose::STANDARD_NO_PAD.decode(ciphertext) {
         if ciphertext.len() < 12 {
@@ -44,9 +51,6 @@ fn decrypt(password: &str, ciphertext: &str) -> String {
 
         let nonce = Nonce::from_slice(&ciphertext[..12]);
         let ciphertext = &ciphertext[12..];
-
-        let key = pbkdf2_hmac_array::<Sha256, 32>(password.as_bytes(), salt, 1_000);
-        let key = Key::from_slice(&key);
 
         let cipher = ChaCha20Poly1305::new(&key);
 
@@ -62,7 +66,7 @@ fn decrypt(password: &str, ciphertext: &str) -> String {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, encrypt, decrypt])
+        .invoke_handler(tauri::generate_handler![generate_key, encrypt, decrypt])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

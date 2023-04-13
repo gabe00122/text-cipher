@@ -1,0 +1,41 @@
+body {
+    background-color: rgb(24, 34, 43);
+    color: rgb(255, 255, 255);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+}
+
+label, textarea {
+    display: block;
+}
+
+textarea {
+    width: 100%;
+    height: 200px;
+    resize: none;
+}
+
+textarea, input[type="text"] {
+    color: #f1f2f6;
+    margin-top: 2px;
+    background-color: rgb(67, 84, 92);
+    border: 1px solid rgb(123, 123, 132);
+    border-radius: .2rem;
+}
+
+textarea::placeholder {
+    color: #9d9ea0;
+}
+
+.container {
+    display: flex;
+}
+
+.container > div {
+    flex: auto;
+    margin: .6rem;
+}
+
+.password-container {
+    display: flex;
+    margin: .6rem;
+}
