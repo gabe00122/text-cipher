@@ -2686,7 +2686,6 @@ dependencies = [
 name = "text-cipher"
 version = "0.0.0"
 dependencies = [
- "base64 0.21.0",
  "chacha20poly1305",
  "hex-literal",
  "pbkdf2",

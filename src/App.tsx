@@ -20,15 +20,15 @@ function App() {
   }, [decryptCiphertext, secretKey]);
 
   async function encrypt() {
-    setEncryptCiphertext(await invoke("encrypt", { key: secretKey, plaintext: encryptPlaintext }));
+    setEncryptCiphertext(encodeBinary(await invoke("encrypt", { key: decodeBinary(secretKey), plaintext: encryptPlaintext })));
   }
 
   async function decrypt() {
-    setDecryptPlaintext(await invoke("decrypt", { key: secretKey, ciphertext: decryptCiphertext }));
+    setDecryptPlaintext(await invoke("decrypt", { key: decodeBinary(secretKey), ciphertext: decodeBinary(decryptCiphertext) }));
   }
 
   async function generateKey() {
-    setSecretKey(await invoke("generate_key", { password }));
+    setSecretKey(encodeBinary(await invoke("generate_key", { password })));
   }
 
   return (
@@ -61,7 +61,7 @@ function App() {
             value={secretKey}
             onChange={(e) => setSecretKey(e.currentTarget.value)}
             placeholder="Secret Key"
-            style={{width: "300px"}}
+            style={{ width: "300px" }}
           />
         </div>
       </div>
@@ -109,5 +109,44 @@ function App() {
     </div>
   );
 }
+
+const test = [];
+
+for (let i = 0; i < 256; i++) {
+  test[i] = i;
+}
+
+const dc = decodeBinary(encodeBinary(test));
+for (let i = 0; i < 256; i++) {
+  if (test[i] !== dc[i]) {
+    console.log(`Not equil: ${test[i]} ${dc[i]}`)
+  }
+}
+
+
+function encodeBinary(value: number[]): string {
+  return value.map((x) => {
+    if (x <= 93) {
+      return x + 33;
+    } else if (x <= 105) {
+      return x + 67;
+    } else {
+      return x + 68;
+    }
+  }).map((x) => String.fromCodePoint(x)).join('');
+}
+
+function decodeBinary(value: string): number[] {
+  return value.split('').map((x) => x.codePointAt(0)!).map((x) => {
+    if (x > 173) {
+      return x - 68;
+    } else if (x > 127) {
+      return x - 67;
+    } else {
+      return x - 33;
+    }
+  });
+}
+
 
 export default App;
